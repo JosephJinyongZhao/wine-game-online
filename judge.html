@@ -99,7 +99,7 @@
 <body>
 
 <!-- Login -->
-<div class="login-overlay" id="loginOverlay">
+<div class="login-overlay" id="loginOverlay" style="display:none">
   <div class="login-box">
     <h2>👑 庄主登录</h2>
     <input type="password" id="loginPwd" placeholder="输入庄主密码" onkeypress="if(event.key==='Enter')doLogin()">
@@ -492,6 +492,11 @@ function renderRanking(data) {
 }
 
 // ====== Init ======
+// 跳过登录，直接加载数据
+window.addEventListener('DOMContentLoaded', function() {
+  isLoggedIn = true;
+  initAfterLogin();
+});
 </script>
 </body>
 </html>
