@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>调酒商业模拟 - 庄主</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html{font-size:16px;-webkit-tap-highlight-color:transparent}
@@ -157,22 +156,38 @@
 </div>
 
 <script>
-// ====== Supabase init ======
+// ====== Supabase init (动态加载，不阻塞页面) ======
 let supabase = null;
 let sdkReady = false;
-try {
-  if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(
-      'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0'
-    );
-    sdkReady = true;
-  }
-} catch(e) { console.error('Supabase init failed:', e); }
+const SUPABASE_URL = 'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0';
 
-if (!sdkReady) {
-  document.getElementById('loginHint').textContent = '⚠️ 数据库连接失败，请刷新页面重试';
-  document.getElementById('loginHint').style.color = '#ff6b6b';
+let sdkResolve;
+const sdkPromise = new Promise(r => { sdkResolve = r; });
+
+function tryInitSupabase() {
+  if (window.supabase && window.supabase.createClient && !sdkReady) {
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      sdkReady = true;
+      sdkResolve(true);
+    } catch(e) {
+      console.error('Supabase init error:', e);
+      sdkResolve(false);
+    }
+    return true;
+  }
+  return false;
+}
+
+// 先检查是否已经加载
+if (!tryInitSupabase()) {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload = () => { tryInitSupabase() || sdkResolve(false); };
+  s.onerror = () => { console.error('SDK load failed'); sdkResolve(false); };
+  document.head.appendChild(s);
+  setTimeout(() => { if (!sdkReady) sdkResolve(false); }, 15000);
 }
 
 // ====== Constants ======
@@ -189,7 +204,18 @@ function doLogin() {
   if (pwd === JUDGE_PWD) {
     document.getElementById('loginOverlay').classList.add('hide');
     isLoggedIn = true;
-    initAfterLogin();
+    // 等待 SDK 就绪后再加载数据
+    sdkPromise.then(ready => {
+      if (ready) {
+        initAfterLogin();
+      } else {
+        document.getElementById('loginOverlay').classList.remove('hide');
+        const hint = document.getElementById('loginHint');
+        hint.textContent = '⚠️ 数据库连接失败，请刷新页面重试';
+        hint.style.color = '#ff6b6b';
+        hint.style.display = 'block';
+      }
+    });
   } else {
     document.getElementById('loginErr').style.display = 'block';
   }
@@ -489,10 +515,7 @@ function renderRanking(data) {
 }
 
 // ====== Init ======
-async function init() {
-  if (!sdkReady) return;
-  // Don't auto-load before login to avoid issues with sleeping DB
-}
+// SDK 动态加载中，用户登录后通过 sdkPromise 等待就绪
 </script>
 </body>
 </html>
