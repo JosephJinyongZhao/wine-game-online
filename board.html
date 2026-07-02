@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>调酒商业模拟 - 排行榜</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html{font-size:16px;scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
@@ -87,14 +87,45 @@
 
 <script>
 let supabase = null;
-try {
-  if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(
-      'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0'
-    );
+let sdkReady = false;
+const SUPABASE_URL = 'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0';
+
+let sdkResolve;
+const sdkPromise = new Promise(r => { sdkResolve = r; });
+
+function tryInitSupabase() {
+  if (window.supabase && window.supabase.createClient && !sdkReady) {
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      sdkReady = true;
+      sdkResolve(true);
+    } catch(e) {
+      console.error('Supabase init error:', e);
+      sdkResolve(false);
+    }
+    return true;
   }
-} catch(e) { console.error('Supabase init failed:', e); }
+  return false;
+}
+
+// 多CDN级联回退加载
+const CDN_URLS = [
+  'https://unpkg.com/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
+function loadSDK(idx) {
+  if (idx >= CDN_URLS.length) { sdkResolve(false); return; }
+  const s = document.createElement('script');
+  s.src = CDN_URLS[idx];
+  s.onload = () => { tryInitSupabase() || loadSDK(idx + 1); };
+  s.onerror = () => { console.warn('CDN failed:', CDN_URLS[idx]); loadSDK(idx + 1); };
+  document.head.appendChild(s);
+}
+if (!tryInitSupabase()) {
+  loadSDK(0);
+  setTimeout(() => { if (!sdkReady) sdkResolve(false); }, 20000);
+}
 
 const COST_XDL=3, COST_HPN=7, COST_MSL=4.8, COST_RATIO=0.4, RETAIL_MULT=3;
 
@@ -116,9 +147,12 @@ function switchView(mode, round) {
 }
 
 async function loadData() {
-  if (!supabase) {
-    document.getElementById('rankList').innerHTML = '<div class="empty"><p>⚠️ 数据库连接失败，请刷新页面</p></div>';
-    return;
+  if (!sdkReady) {
+    const ready = await sdkPromise;
+    if (!ready) {
+      document.getElementById('rankList').innerHTML = '<div class="empty"><p>⚠️ 数据库连接失败，请检查网络后刷新页面</p></div>';
+      return;
+    }
   }
 
   const { data, error } = await supabase
