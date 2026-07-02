@@ -146,7 +146,7 @@ function calcMetrics(d) {
   let feeRate=null, netProfit=null, operProfit=null, grossProfit=null;
   if (hasBrand && demand !== null) {
     const priceRatio = retail > 0 ? d.my_price / retail : 1;
-    const feeRandom = d.pricing_self_score || 0;
+    const feeRandom = (d.pricing_self_score || 0.03) - 0.03; // 减去偏移
     feeRate = Math.max(0.70, Math.min(0.95, 0.85 + 0.08*(priceRatio-1) - 0.015*d.brand_score + feeRandom));
     grossProfit = (d.my_price - cost) * demand;
     operProfit = (d.my_price - factory) * demand;

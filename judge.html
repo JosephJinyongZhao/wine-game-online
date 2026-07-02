@@ -464,7 +464,7 @@ function renderRanking(data) {
     const avg = (d.risk_score + d.pricing_score + d.brand_score) / 3;
     const demand = Math.round(avg * 100);
     const priceRatio = retail > 0 ? d.my_price / retail : 1;
-    const feeRandom = d.pricing_self_score || 0;
+    const feeRandom = (d.pricing_self_score || 0.03) - 0.03; // 减去偏移
     const feeRate = Math.max(0.70, Math.min(0.95, 0.85 + 0.08*(priceRatio-1) - 0.015*d.brand_score + feeRandom));
     const netProfit = (d.my_price - factory) * demand * (1 - feeRate);
     return { ...d, avg, demand, netProfit };

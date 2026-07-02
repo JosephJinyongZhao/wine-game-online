@@ -336,7 +336,9 @@ async function loadExistingSubmission() {
     document.getElementById('f_brandStory').value = data.brand_story || '';
     document.getElementById('f_positioning').value = data.positioning || '';
     document.getElementById('f_price').value = data.my_price || '';
-    priceRandomFactor = data.pricing_self_score;
+    // pricing_self_score 存的是 feeRandomFactor+0.03（偏移存储避免负数）
+    feeRandomFactor = (data.pricing_self_score || 0.03) - 0.03;
+    priceRandomFactor = null; // 定价分随机因子已内含在pricing_score中，不需要恢复
     calcRecipe();
     calcPricing();
     showResult(data);
@@ -511,7 +513,7 @@ async function submitDecision() {
     brand_story: brandStory,
     risk_score: risk.total,
     pricing_score: priceScore,
-    pricing_self_score: feeRandomFactor,
+    pricing_self_score: feeRandomFactor + 0.03, // 偏移+0.03存储，避免check constraint负数
     status: existing && existing.status === 'scored' ? 'scored' : 'submitted'
   };
 
@@ -562,7 +564,7 @@ function showResult(data) {
     const avg = (data.risk_score + data.pricing_score + data.brand_score) / 3;
     const demand = Math.round(avg * 100);
     const priceRatio = retail > 0 ? data.my_price / retail : 1;
-    const feeRandom = data.pricing_self_score || 0;
+    const feeRandom = (data.pricing_self_score || 0.03) - 0.03; // 减去偏移
     const feeRate = Math.max(0.70, Math.min(0.95, 0.85 + 0.08*(priceRatio-1) - 0.015*data.brand_score + feeRandom));
     const grossProfit = (data.my_price - baseCost) * demand;
     const operProfit = (data.my_price - factory) * demand;
