@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>调酒商业模拟 - 队伍提交</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px;scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f5f0eb;color:#2c2416;line-height:1.5;padding-bottom:24px}
+  .top-bar{background:linear-gradient(135deg,#2c1810,#4a2c1a);color:#f0e6d8;padding:14px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+  .top-bar h1{font-size:1.05rem;font-weight:700}
+  .top-bar .round-tag{font-size:.72rem;padding:3px 10px;background:rgba(196,168,130,.2);border-radius:100px;color:#c4a882;border:1px solid rgba(196,168,130,.3)}
+  .container{max-width:480px;margin:0 auto;padding:16px}
+  .card{background:#fff;border-radius:12px;padding:18px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:14px}
+  .card-label{font-size:.68rem;font-weight:600;color:#8b6914;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .card h2{font-size:1.1rem;color:#2c2416;margin-bottom:8px}
+  .card .desc{font-size:.82rem;color:#6a5a4a;margin-bottom:12px}
+  .fg{margin-bottom:12px}
+  .fg label{display:block;font-size:.8rem;font-weight:600;color:#4a2c1a;margin-bottom:2px}
+  .fg .hint{font-size:.72rem;color:#8a7a6a;margin-bottom:2px}
+  .fg input,.fg textarea,.fg select{width:100%;padding:10px 12px;border:1.5px solid #d4c8b8;border-radius:8px;font-size:.88rem;font-family:inherit;background:#faf6f0;transition:border-color .2s}
+  .fg input:focus,.fg textarea:focus,.fg select:focus{outline:none;border-color:#8b6914;box-shadow:0 0 0 3px rgba(139,105,20,.08)}
+  .fg textarea{resize:vertical;min-height:48px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .dtable{width:100%;border-collapse:collapse;font-size:.78rem;margin:8px 0}
+  .dtable th{background:#f0e8dc;padding:7px 8px;text-align:left;font-weight:600;color:#4a2c1a;border-bottom:2px solid #d4c8b8;font-size:.74rem}
+  .dtable td{padding:7px 8px;border-bottom:1px solid #e8e0d6;color:#4a2c1a;font-size:.76rem}
+  .calc{background:#faf6f0;border:1px solid #e8e0d6;border-radius:10px;padding:14px;margin:10px 0}
+  .calc-r{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem;border-bottom:1px solid #f0e8dc}
+  .calc-r:last-child{border-bottom:none;font-weight:600}
+  .calc-r .cl{color:#6a5a4a}
+  .calc-r .cv{color:#4a2c1a;font-weight:500}
+  .calc-r .cv.hi{color:#8b6914;font-weight:700}
+  .calc-r .sub{padding-left:12px;font-size:.76rem;color:#8a7a6a}
+  .info{background:#f0e8dc;border-radius:8px;padding:12px;margin:10px 0;font-size:.8rem;color:#4a2c1a;line-height:1.6}
+  .info strong{color:#8b6914}
+  .price-chain{background:#faf6f0;border:1px solid #e8e0d6;border-radius:10px;padding:14px;margin:10px 0}
+  .price-chain .pc-step{display:flex;align-items:center;padding:6px 0;font-size:.84rem;border-bottom:1px dashed #e8e0d6}
+  .price-chain .pc-step:last-child{border-bottom:none}
+  .price-chain .pc-arrow{color:#8b6914;font-size:1rem;margin:0 8px;font-weight:700}
+  .price-chain .pc-label{color:#6a5a4a;flex:1}
+  .price-chain .pc-value{color:#4a2c1a;font-weight:700;font-size:.9rem}
+  .risk-breakdown{background:#faf6f0;border:1px solid #e8e0d6;border-radius:10px;padding:12px;margin:8px 0;font-size:.78rem}
+  .risk-breakdown .rb-title{font-weight:700;color:#8b6914;margin-bottom:6px;font-size:.8rem}
+  .risk-breakdown .rb-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted #e8e0d6}
+  .risk-breakdown .rb-row:last-child{border-bottom:none;font-weight:700;color:#4a2c1a}
+  .risk-breakdown .rb-label{color:#6a5a4a}
+  .risk-breakdown .rb-value{color:#4a2c1a;font-weight:600}
+  .collapse-header{display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer;color:#8b6914;font-size:.82rem;font-weight:600}
+  .collapse-header::after{content:'▾';font-size:.9rem;transition:transform .2s}
+  .collapse-header.open::after{transform:rotate(180deg)}
+  .collapse-body{display:none;padding-top:6px}
+  .collapse-body.show{display:block}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:12px 20px;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;border:none;width:100%}
+  .btn-p{background:linear-gradient(135deg,#8b6914,#b8860b);color:#fff}
+  .btn-p:active{transform:scale(0.98);opacity:.9}
+  .btn-p:disabled{opacity:.5;cursor:not-allowed}
+  .btn-s{background:#f0e8dc;color:#4a2c1a;border:1.5px solid #d4c8b8}
+  .btn-row{display:flex;gap:8px;margin-top:14px}
+  .btn-row .btn{flex:1}
+  .result-box{background:linear-gradient(135deg,#2c1810,#4a2c1a);color:#f0e6d8;border-radius:12px;padding:20px;text-align:center;margin:12px 0}
+  .result-box .big{font-size:2.4rem;font-weight:700;color:#fbbf24}
+  .result-box .lbl{font-size:.8rem;color:#c4a882;margin-top:2px}
+  .result-box .level{margin-top:6px;font-size:.82rem;color:#c4a882}
+  .status-bar{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#856404;display:none}
+  .status-bar.success{background:#d4edda;border-color:#28a745;color:#155724}
+  .status-bar.error{background:#f8d7da;border-color:#dc3545;color:#721c24}
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+  .loading-overlay.show{display:flex}
+  .loading-box{background:#fff;border-radius:12px;padding:30px 40px;text-align:center}
+  .spinner{width:36px;height:36px;border:3px solid #e8e0d6;border-top-color:#8b6914;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .score-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:600}
+  .score-badge.auto{background:#e8f5e9;color:#2e7d32}
+  .score-badge.waiting{background:#fff3e0;color:#e65100}
+  .nav-links{display:flex;gap:8px;margin-bottom:14px}
+  .nav-links a{flex:1;text-align:center;padding:10px;border-radius:8px;font-size:.82rem;font-weight:600;text-decoration:none;color:#4a2c1a;background:#f0e8dc;border:1px solid #d4c8b8}
+  .nav-links a.active{background:#8b6914;color:#fff;border-color:#8b6914}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>🍷 调酒商业模拟</h1>
+  <span class="round-tag" id="roundBadge">第 1 轮</span>
+</div>
+
+<div class="container">
+
+  <div class="nav-links">
+    <a href="#" class="active">📝 提交</a>
+    <a href="wine-game-board.html">🏆 排行榜</a>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- 队伍选择 -->
+  <div class="card">
+    <div class="card-label">身份</div>
+    <h2>👥 选择队伍</h2>
+    <div class="row2">
+      <div class="fg">
+        <label>队名</label>
+        <select id="teamSelect" onchange="onTeamChange()">
+          <option value="">-- 选择队伍 --</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>轮次</label>
+        <select id="roundSelect" onchange="onRoundChange()">
+          <option value="1">第 1 轮</option>
+          <option value="2">第 2 轮</option>
+          <option value="3">第 3 轮</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" id="newTeamFg" style="display:none">
+      <label>新队名</label>
+      <input type="text" id="newTeamName" placeholder="输入新队名">
+    </div>
+  </div>
+
+  <!-- 配方 -->
+  <div class="card">
+    <div class="card-label">步骤 1</div>
+    <h2>🧪 基酒配方</h2>
+    <div class="desc">总调配 750ml/瓶，预算 300 元</div>
+    <table class="dtable">
+      <tr><th>基酒</th><th>特点</th><th>成本(元/100ml)</th></tr>
+      <tr><td><b>赤霞珠</b></td><td>国际主流，接受度广</td><td>3</td></tr>
+      <tr><td><b>马瑟兰</b></td><td>宁夏明星，浓郁独特</td><td>7</td></tr>
+      <tr><td><b>西拉</b></td><td>国外知名，宁夏产量少</td><td>4.8</td></tr>
+    </table>
+    <div class="row3">
+      <div class="fg"><label>赤霞珠 ml</label><input type="number" id="f_xdl" min="0" max="750" step="5" value="250" oninput="calcRecipe()"></div>
+      <div class="fg"><label>马瑟兰 ml</label><input type="number" id="f_hpn" min="0" max="750" step="5" value="250" oninput="calcRecipe()"></div>
+      <div class="fg"><label>西拉 ml</label><input type="number" id="f_msl" min="0" max="750" step="5" value="250" oninput="calcRecipe()"></div>
+    </div>
+    <div class="calc">
+      <div class="calc-r"><span class="cl">总用量</span><span class="cv" id="r_total">750 ml</span></div>
+      <div class="calc-r"><span class="cl">基酒成本</span><span class="cv hi" id="r_cost">-- 元/瓶</span></div>
+      <div class="calc-r"><span class="cl">出厂价</span><span class="cv" id="r_factory">-- 元</span></div>
+      <div class="calc-r"><span class="cl">建议零售价</span><span class="cv hi" id="r_retail">-- 元/瓶</span></div>
+      <div class="calc-r"><span class="cl">预算剩余</span><span class="cv" id="r_budget" style="color:#166534">-- 元</span></div>
+    </div>
+
+    <div class="collapse-header" onclick="toggleCollapse(this)">🎲 风险(创新)分 自动计算</div>
+    <div class="collapse-body">
+      <div class="risk-breakdown">
+        <div class="rb-title">🎲 风险(创新)分分解</div>
+        <div class="rb-row"><span class="rb-label">A. 混酿创新分</span><span class="rb-value" id="rb_combo">0</span></div>
+        <div class="rb-row"><span class="rb-label"> 组合类型</span><span class="rb-value" id="rb_comboType">--</span></div>
+        <div class="rb-row"><span class="rb-label">B. 配比挑战分</span><span class="rb-value" id="rb_balance">0</span></div>
+        <div class="rb-row"><span class="rb-label"> 主导品种占比</span><span class="rb-value" id="rb_mainRatio">--</span></div>
+        <div class="rb-row"><span class="rb-label"> 均衡程度</span><span class="rb-value" id="rb_balanceNote">--</span></div>
+        <div class="rb-row"><span class="rb-label" style="font-weight:700;color:#4a2c1a">风险(创新)总分</span><span class="rb-value" id="rb_total" style="color:#8b6914;font-size:.9rem">0 / 10</span></div>
+      </div>
+    </div>
+    <div class="fg" style="margin-top:8px"><label>📝 配方思路</label><textarea id="f_reason" placeholder="为什么这样配？"></textarea></div>
+  </div>
+
+  <!-- 品牌 -->
+  <div class="card">
+    <div class="card-label">步骤 2</div>
+    <h2>🎨 品牌包装</h2>
+    <div class="desc">名字抓人，故事和配方呼应</div>
+    <div class="fg"><label>🏷️ 酒名</label><input id="f_wineName" placeholder="夜光·霞语、北纬38°..."></div>
+    <div class="fg"><label>📖 品牌故事</label><textarea id="f_brandStory" placeholder="这瓶酒背后的故事..." style="min-height:60px"></textarea></div>
+    <div class="fg"><label>🎯 定位一句话</label><input id="f_positioning" placeholder="献给在都市中寻找宁静的你"></div>
+  </div>
+
+  <!-- 定价 -->
+  <div class="card">
+    <div class="card-label">步骤 3</div>
+    <h2>💰 定价决策</h2>
+    <div class="price-chain">
+      <div class="pc-step"><span class="pc-label">🍇 基酒成本</span><span class="pc-value" id="pc_cost">-- 元/瓶</span></div>
+      <div class="pc-step" style="justify-content:center;padding:2px 0"><span style="color:#8a7a6a;font-size:.72rem">↓ ÷0.4（酿造+包材+运营+毛利占60%）</span></div>
+      <div class="pc-step"><span class="pc-label">🏭 出厂价</span><span class="pc-value" id="pc_factory">-- 元/瓶</span></div>
+      <div class="pc-step" style="justify-content:center;padding:2px 0"><span style="color:#8a7a6a;font-size:.72rem">↓ ×3（流通+门店+营销+税费+渠道利润）</span></div>
+      <div class="pc-step"><span class="pc-label">🏷️ 建议零售价</span><span class="pc-value" id="pc_retail" style="color:#8b6914;font-size:1rem">-- 元/瓶</span></div>
+    </div>
+    <div class="fg">
+      <label>💵 你的最终定价（元/瓶）</label>
+      <input type="number" id="f_price" min="0" step="1" placeholder="200" oninput="calcPricing()" style="font-size:1.1rem;font-weight:700;text-align:center;padding:14px">
+      <div class="hint">建议零售价：<span id="suggestPrice">--</span> 元 · 偏离度：<span id="priceDev">--</span></div>
+    </div>
+    <div class="calc">
+      <div class="calc-r"><span class="cl">📊 定价合理分（自动）</span><span class="cv hi" id="priceScoreDisplay">-- / 10</span></div>
+    </div>
+    <div class="fg"><label>📊 定价策略</label><input id="f_priceReason" placeholder="为什么定这个价？"></div>
+  </div>
+
+  <!-- 提交 -->
+  <button class="btn btn-p" id="submitBtn" onclick="submitDecision()">✅ 提交本轮决策</button>
+
+  <!-- 结果展示 -->
+  <div id="resultSection" style="display:none">
+    <div class="card" style="margin-top:14px">
+      <div class="card-label">📊 本轮结果</div>
+      <h2 id="resultTitle">评分与成绩</h2>
+      <div class="row3" style="margin:12px 0">
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:#6a5a4a">🎲 风险创新分</div>
+          <div style="font-size:1.3rem;font-weight:700;color:#8b6914" id="res_risk">--</div>
+          <div><span class="score-badge auto">自动</span></div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:#6a5a4a">💰 定价合理分</div>
+          <div style="font-size:1.3rem;font-weight:700;color:#8b6914" id="res_price">--</div>
+          <div><span class="score-badge auto">自动</span></div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:#6a5a4a">📖 品牌分</div>
+          <div style="font-size:1.3rem;font-weight:700;color:#8b6914" id="res_brand">--</div>
+          <div><span class="score-badge waiting" id="brandBadge">等待庄主</span></div>
+        </div>
+      </div>
+      <div id="profitSection" style="display:none">
+        <div class="calc">
+          <div class="calc-r"><span class="cl">平均分</span><span class="cv hi" id="res_avg">--</span></div>
+          <div class="calc-r"><span class="cl">市场需求</span><span class="cv hi" id="res_demand">-- 瓶</span></div>
+          <div class="calc-r"><span class="cl">毛利</span><span class="cv" id="res_gross">--</span></div>
+          <div class="calc-r"><span class="cl">经营利润</span><span class="cv" id="res_oper">--</span></div>
+          <div class="calc-r"><span class="cl">费用率</span><span class="cv" id="res_fee">--</span></div>
+          <div class="calc-r"><span class="cl">净利润</span><span class="cv hi" id="res_net">--</span></div>
+        </div>
+        <div class="result-box">
+          <div class="lbl">综合评分</div>
+          <div class="big" id="res_final">--</div>
+          <div class="level" id="res_level"></div>
+        </div>
+      </div>
+      <div id="brandWaiting" class="info" style="text-align:center">
+        ⏳ 等待庄主打分后，利润和排名将自动计算
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p style="color:#4a2c1a;font-weight:600">提交中...</p>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const COST_XDL = 3, COST_HPN = 7, COST_MSL = 4.8;
+const COST_RATIO = 0.4, RETAIL_MULT = 3, PRICE_DECAY_K = 4, BUDGET = 300;
+
+let currentTeamId = null;
+let priceRandomFactor = null; // 定价分随机因子
+let feeRandomFactor = null;   // 费用率随机因子
+
+// 初始化
+async function init() {
+  await loadTeams();
+  calcRecipe();
+}
+
+async function loadTeams() {
+  const { data } = await supabase.from('teams').select('*').order('name');
+  const sel = document.getElementById('teamSelect');
+  sel.innerHTML = '<option value="">-- 选择队伍 --</option>';
+  sel.innerHTML += '<option value="__new__">+ 新建队伍</option>';
+  if (data) {
+    data.forEach(t => {
+      sel.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+    });
+  }
+}
+
+function onTeamChange() {
+  const val = document.getElementById('teamSelect').value;
+  document.getElementById('newTeamFg').style.display = val === '__new__' ? 'block' : 'none';
+  if (val && val !== '__new__') {
+    currentTeamId = val;
+    loadExistingSubmission();
+  }
+}
+
+function onRoundChange() {
+  document.getElementById('roundBadge').textContent = '第 ' + document.getElementById('roundSelect').value + ' 轮';
+  if (currentTeamId) loadExistingSubmission();
+}
+
+async function loadExistingSubmission() {
+  const round = +document.getElementById('roundSelect').value;
+  const { data, error } = await supabase.from('submissions')
+    .select('*')
+    .eq('team_id', currentTeamId)
+    .eq('round', round)
+    .maybeSingle();
+
+  if (data && data.id) {
+    // 填充已有数据
+    document.getElementById('f_xdl').value = data.cabernet_ml || 0;
+    document.getElementById('f_hpn').value = data.marselan_ml || 0;
+    document.getElementById('f_msl').value = data.syrah_ml || 0;
+    document.getElementById('f_wineName').value = data.wine_name || '';
+    document.getElementById('f_brandStory').value = data.brand_story || '';
+    document.getElementById('f_positioning').value = data.positioning || '';
+    document.getElementById('f_price').value = data.my_price || '';
+    priceRandomFactor = data.pricing_self_score; // 复用此字段存费用率随机因子
+    calcRecipe();
+    calcPricing();
+    showResult(data);
+    showStatus('已加载本轮已提交的数据', 'success');
+  } else {
+    document.getElementById('resultSection').style.display = 'none';
+    priceRandomFactor = null;
+    feeRandomFactor = null;
+  }
+}
+
+// ====== 计算逻辑 ======
+function calcBottleCost(xdl, hpn, msl) {
+  return (xdl/100)*COST_XDL + (hpn/100)*COST_HPN + (msl/100)*COST_MSL;
+}
+function calcFactoryPrice(baseCost) { return baseCost / COST_RATIO; }
+function calcSuggestedRetail(factoryPrice) { return factoryPrice * RETAIL_MULT; }
+
+function calcRiskScore(xdl, hpn, msl) {
+  const total = xdl + hpn + msl;
+  if (total === 0) return { total:0, comboScore:0, comboType:'无', balanceScore:0, mainRatio:0, balanceNote:'无' };
+  const hasXdl = xdl>0, hasHpn = hpn>0, hasMsl = msl>0;
+  const varietyCount = (hasXdl?1:0)+(hasHpn?1:0)+(hasMsl?1:0);
+  let comboScore=0, comboType='';
+  if(varietyCount===1){comboScore=0;comboType='单一品种';}
+  else if(varietyCount===2){
+    if(hasHpn&&hasMsl){comboScore=3.5;comboType='创新混酿(马瑟兰+西拉)';}
+    else if(hasXdl&&hasHpn){comboScore=2;comboType='成熟混酿(赤霞珠+马瑟兰)';}
+    else{comboScore=2;comboType='成熟混酿(赤霞珠+西拉)';}
+  } else { comboScore=5; comboType='三品种混酿'; }
+  const ratios=[];
+  if(hasXdl) ratios.push(xdl/total);
+  if(hasHpn) ratios.push(hpn/total);
+  if(hasMsl) ratios.push(msl/total);
+  const mainRatio=Math.max(...ratios);
+  let balanceScore=0, balanceNote='';
+  if(varietyCount===1){balanceScore=0;balanceNote='单一品种，无配比风险';}
+  else if(mainRatio>=0.85){balanceScore=0;balanceNote='主导品种≥85%，配比稳健';}
+  else{
+    const perfectBalance=1-1/varietyCount;
+    balanceScore=Math.min(5, 5*(1-mainRatio)/perfectBalance);
+    balanceNote='主导占比'+(mainRatio*100).toFixed(0)+'%，配比有挑战';
+  }
+  return { total:Math.round((comboScore+balanceScore)*10)/10, comboScore:Math.round(comboScore*10)/10, comboType, balanceScore:Math.round(balanceScore*10)/10, mainRatio, balanceNote };
+}
+
+function calcPricingScore(sellPrice, retailPrice, randomFactor) {
+  if (sellPrice <= 0 || retailPrice <= 0) return 0;
+  const relDev = Math.abs(sellPrice - retailPrice) / retailPrice;
+  const base = 10 * Math.exp(-PRICE_DECAY_K * relDev);
+  const rf = randomFactor !== null ? randomFactor : (Math.random()*0.15 - 0.075);
+  if (randomFactor === null) priceRandomFactor = rf; // 保存
+  return Math.max(0, Math.min(10, Math.round(base * (1 + rf) * 10) / 10));
+}
+
+function calcRecipe() {
+  const xdl=+document.getElementById('f_xdl').value||0;
+  const hpn=+document.getElementById('f_hpn').value||0;
+  const msl=+document.getElementById('f_msl').value||0;
+  const total=xdl+hpn+msl;
+  const baseCost=calcBottleCost(xdl,hpn,msl);
+  const factory=calcFactoryPrice(baseCost);
+  const retail=calcSuggestedRetail(factory);
+  const budget=BUDGET-baseCost;
+
+  document.getElementById('r_total').textContent=total.toFixed(0)+' ml';
+  document.getElementById('r_cost').textContent=baseCost.toFixed(2)+' 元/瓶';
+  document.getElementById('r_factory').textContent=factory.toFixed(1)+' 元';
+  document.getElementById('r_retail').textContent=retail.toFixed(0)+' 元/瓶';
+  const bEl=document.getElementById('r_budget');
+  bEl.textContent=budget.toFixed(1)+' 元';
+  bEl.style.color=budget<0?'#dc2626':'#166534';
+
+  document.getElementById('pc_cost').textContent=baseCost.toFixed(2)+' 元/瓶';
+  document.getElementById('pc_factory').textContent=factory.toFixed(1)+' 元/瓶';
+  document.getElementById('pc_retail').textContent=retail.toFixed(0)+' 元/瓶';
+  document.getElementById('suggestPrice').textContent=retail.toFixed(0);
+
+  const risk=calcRiskScore(xdl,hpn,msl);
+  document.getElementById('rb_combo').textContent=risk.comboScore.toFixed(1)+' / 5';
+  document.getElementById('rb_comboType').textContent=risk.comboType;
+  document.getElementById('rb_balance').textContent=risk.balanceScore.toFixed(1)+' / 5';
+  document.getElementById('rb_mainRatio').textContent=(risk.mainRatio*100).toFixed(0)+'%';
+  document.getElementById('rb_balanceNote').textContent=risk.balanceNote;
+  document.getElementById('rb_total').textContent=risk.total.toFixed(1)+' / 10';
+
+  calcPricing();
+}
+
+function calcPricing() {
+  const xdl=+document.getElementById('f_xdl').value||0;
+  const hpn=+document.getElementById('f_hpn').value||0;
+  const msl=+document.getElementById('f_msl').value||0;
+  const baseCost=calcBottleCost(xdl,hpn,msl);
+  const retail=calcSuggestedRetail(calcFactoryPrice(baseCost));
+  const price=+document.getElementById('f_price').value||0;
+
+  if(price>0 && retail>0){
+    const diff=price-retail;
+    const devEl=document.getElementById('priceDev');
+    if(diff>0) devEl.textContent='高于 +'+diff.toFixed(0)+' 元';
+    else if(diff<0) devEl.textContent='低于 '+diff.toFixed(0)+' 元';
+    else devEl.textContent='完全一致 ✓';
+    document.getElementById('priceScoreDisplay').textContent=calcPricingScore(price,retail,priceRandomFactor).toFixed(1)+' / 10';
+  } else {
+    document.getElementById('priceDev').textContent='--';
+    document.getElementById('priceScoreDisplay').textContent='-- / 10';
+  }
+}
+
+function toggleCollapse(el){
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('show');
+}
+
+function showStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + (type||'');
+  bar.style.display = 'block';
+  setTimeout(()=>{ bar.style.display='none'; }, 5000);
+}
+
+// ====== 提交 ======
+async function submitDecision() {
+  const teamVal = document.getElementById('teamSelect').value;
+  if (!teamVal) { showStatus('请选择队伍', 'error'); return; }
+
+  let teamId = teamVal;
+  if (teamVal === '__new__') {
+    const newName = document.getElementById('newTeamName').value.trim();
+    if (!newName) { showStatus('请输入新队名', 'error'); return; }
+    const { data: newTeam, error } = await supabase.from('teams').insert({ name: newName }).select('*').single();
+    if (error) { showStatus('创建队伍失败: ' + error.message, 'error'); return; }
+    teamId = newTeam.id;
+    currentTeamId = teamId;
+    await loadTeams();
+    document.getElementById('teamSelect').value = teamId;
+  }
+
+  const xdl=+document.getElementById('f_xdl').value||0;
+  const hpn=+document.getElementById('f_hpn').value||0;
+  const msl=+document.getElementById('f_msl').value||0;
+  if(xdl+hpn+msl===0){ showStatus('请至少填写一种基酒用量','error'); return; }
+
+  const wineName = document.getElementById('f_wineName').value.trim();
+  if(!wineName){ showStatus('请填写酒名','error'); return; }
+
+  const round = +document.getElementById('roundSelect').value;
+  const price = +document.getElementById('f_price').value||0;
+  if(price<=0){ showStatus('请填写定价','error'); return; }
+
+  const positioning = document.getElementById('f_positioning').value.trim();
+  const brandStory = document.getElementById('f_brandStory').value.trim();
+
+  // 计算分数
+  const risk = calcRiskScore(xdl, hpn, msl);
+  const baseCost = calcBottleCost(xdl, hpn, msl);
+  const retail = calcSuggestedRetail(calcFactoryPrice(baseCost));
+
+  // 随机因子（首次提交时生成，后续更新保持不变）
+  if (priceRandomFactor === null) priceRandomFactor = Math.random()*0.15 - 0.075;
+  if (feeRandomFactor === null) feeRandomFactor = Math.random()*0.06 - 0.03;
+
+  const priceScore = calcPricingScore(price, retail, priceRandomFactor);
+
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  // 检查是否已有提交
+  const { data: existing } = await supabase.from('submissions')
+    .select('id, pricing_self_score')
+    .eq('team_id', teamId)
+    .eq('round', round)
+    .maybeSingle();
+
+  const payload = {
+    team_id: teamId,
+    round,
+    wine_name: wineName,
+    cabernet_ml: xdl,
+    marselan_ml: hpn,
+    syrah_ml: msl,
+    my_price: price,
+    positioning,
+    brand_story: brandStory,
+    risk_score: risk.total,
+    pricing_score: priceScore,
+    pricing_self_score: feeRandomFactor, // 复用此字段存费用率随机因子
+    status: existing && existing.status === 'scored' ? 'scored' : 'submitted'
+  };
+
+  let result;
+  if (existing) {
+    result = await supabase.from('submissions').update(payload).eq('id', existing.id);
+  } else {
+    result = await supabase.from('submissions').insert(payload);
+  }
+
+  document.getElementById('loadingOverlay').classList.remove('show');
+
+  if (result.error) {
+    showStatus('提交失败: ' + result.error.message, 'error');
+    return;
+  }
+
+  showStatus('✅ 提交成功！', 'success');
+
+  // 加载结果
+  const { data: submission } = await supabase.from('submissions')
+    .select('*, teams(name)')
+    .eq('team_id', teamId)
+    .eq('round', round)
+    .single();
+  showResult(submission);
+}
+
+function showResult(data) {
+  if (!data) return;
+  document.getElementById('resultSection').style.display = 'block';
+
+  document.getElementById('res_risk').textContent = data.risk_score !== null ? data.risk_score.toFixed(1) : '--';
+  document.getElementById('res_price').textContent = data.pricing_score !== null ? data.pricing_score.toFixed(1) : '--';
+
+  if (data.brand_score !== null && data.brand_score > 0) {
+    document.getElementById('res_brand').textContent = data.brand_score.toFixed(1);
+    document.getElementById('brandBadge').textContent = '已评分';
+    document.getElementById('brandBadge').className = 'score-badge auto';
+    document.getElementById('brandWaiting').style.display = 'none';
+    document.getElementById('profitSection').style.display = 'block';
+
+    // 计算利润
+    const xdl = data.cabernet_ml||0, hpn = data.marselan_ml||0, msl = data.syrah_ml||0;
+    const baseCost = calcBottleCost(xdl, hpn, msl);
+    const factory = calcFactoryPrice(baseCost);
+    const retail = calcSuggestedRetail(factory);
+    const avg = (data.risk_score + data.pricing_score + data.brand_score) / 3;
+    const demand = Math.round(avg * 100);
+    const priceRatio = retail > 0 ? data.my_price / retail : 1;
+    const feeRandom = data.pricing_self_score || 0;
+    const feeRate = Math.max(0.70, Math.min(0.95, 0.85 + 0.08*(priceRatio-1) - 0.015*data.brand_score + feeRandom));
+    const grossProfit = (data.my_price - baseCost) * demand;
+    const operProfit = (data.my_price - factory) * demand;
+    const netProfit = operProfit * (1 - feeRate);
+    const finalScore = Math.round(Math.max(0, avg*10 + (netProfit>0 ? Math.min(netProfit/20,30) : netProfit/20)));
+
+    document.getElementById('res_avg').textContent = avg.toFixed(1);
+    document.getElementById('res_demand').textContent = demand + ' 瓶';
+    document.getElementById('res_gross').textContent = grossProfit.toFixed(0) + ' 元';
+    document.getElementById('res_oper').textContent = operProfit.toFixed(0) + ' 元';
+    document.getElementById('res_fee').textContent = (feeRate*100).toFixed(1) + '%';
+    const netEl = document.getElementById('res_net');
+    netEl.textContent = netProfit.toFixed(0) + ' 元';
+    netEl.style.color = netProfit >= 0 ? '#166534' : '#dc2626';
+    document.getElementById('res_final').textContent = finalScore;
+
+    let level = '';
+    if (finalScore >= 80) level = '🌟 卓越！市场大获成功！';
+    else if (finalScore >= 60) level = '👍 优秀！有潜力冲击大奖！';
+    else if (finalScore >= 40) level = '💪 良好，下轮调整有望大幅提升';
+    else if (finalScore >= 20) level = '📈 有进步空间，回顾评分模型';
+    else level = '🔄 别灰心，核心是试错学习！';
+    document.getElementById('res_level').textContent = level;
+  } else {
+    document.getElementById('res_brand').textContent = '--';
+    document.getElementById('brandBadge').textContent = '等待庄主';
+    document.getElementById('brandBadge').className = 'score-badge waiting';
+    document.getElementById('brandWaiting').style.display = 'block';
+    document.getElementById('profitSection').style.display = 'none';
+  }
+
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>
