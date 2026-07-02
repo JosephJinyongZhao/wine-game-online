@@ -34,7 +34,6 @@
   .score-label{font-size:.65rem;color:#4a6a8a}
   .score-sub{font-size:.68rem;color:#6a8aaa;margin-top:1px}
 
-  /* 详情面板 */
   .detail-panel{display:none;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px;margin:-4px 0 10px 0}
   .detail-panel.show{display:block}
   .detail-panel h3{font-size:.85rem;color:#f6d365;margin-bottom:10px}
@@ -49,7 +48,6 @@
   .profit-row .pv.pos{color:#81c784}
   .profit-row .pv.neg{color:#ff6b6b}
 
-  /* 总排名特殊样式 */
   .total-profit{font-size:.82rem;color:#fbbf24;font-weight:700;margin-left:4px}
 
   .empty{text-align:center;padding:40px 20px;color:#4a6a8a}
@@ -68,9 +66,9 @@
   <p class="subtitle">实时排行榜 · 三轮总排名</p>
 
   <div class="nav-links">
-    <a href="wine-game-v4-online.html">📝 提交</a>
+    <a href="index.html">📝 提交</a>
     <a href="#" class="active">🏆 排行榜</a>
-    <a href="wine-game-judge.html">👑 庄主</a>
+    <a href="judge.html">👑 庄主</a>
   </div>
 
   <div class="round-tabs">
@@ -88,13 +86,19 @@
 <button class="refresh-btn" onclick="loadData()">🔄</button>
 
 <script>
-const SUPABASE_URL = 'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabase = null;
+try {
+  if (window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(
+      'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0'
+    );
+  }
+} catch(e) { console.error('Supabase init failed:', e); }
 
 const COST_XDL=3, COST_HPN=7, COST_MSL=4.8, COST_RATIO=0.4, RETAIL_MULT=3;
 
-let viewMode = 'round'; // 'round' or 'total'
+let viewMode = 'round';
 let currentRound = 1;
 let allData = [];
 let expandedIdx = -1;
@@ -112,7 +116,11 @@ function switchView(mode, round) {
 }
 
 async function loadData() {
-  // 加载所有数据
+  if (!supabase) {
+    document.getElementById('rankList').innerHTML = '<div class="empty"><p>⚠️ 数据库连接失败，请刷新页面</p></div>';
+    return;
+  }
+
   const { data, error } = await supabase
     .from('submissions')
     .select('*, teams(name)')
@@ -161,14 +169,12 @@ function renderRanking() {
       list.innerHTML = `<div class="empty"><p>🍷 第${currentRound}轮暂无数据</p></div>`;
       return;
     }
-    // 按净利润排序（有分数的在前，没分数的在后）
     const enriched = roundData.map((d, i) => ({ ...d, metrics: calcMetrics(d), origIdx: allData.indexOf(d) }));
     const scored = enriched.filter(d => d.metrics.avg !== null).sort((a,b) => b.metrics.netProfit - a.metrics.netProfit);
     const unscored = enriched.filter(d => d.metrics.avg === null);
     const sorted = [...scored, ...unscored];
     renderList(sorted, 'round');
   } else {
-    // 总排名：汇总三轮净利润
     const teamMap = {};
     allData.forEach((d, i) => {
       const teamName = d.teams?.name || '未知';
@@ -199,7 +205,6 @@ function renderList(sorted, mode) {
     const hasScore = d.metrics.avg !== null;
     const scoreText = hasScore ? d.metrics.avg.toFixed(1) : '待评';
     const profitText = hasScore ? `${d.metrics.netProfit.toFixed(0)}元` : '--';
-    const profitClass = hasScore ? (d.metrics.netProfit >= 0 ? 'pos' : 'neg') : '';
     const statusText = d.status === 'scored' ? '✅' : '📝';
     const globalIdx = d.origIdx;
 
@@ -238,7 +243,6 @@ function renderTotalList(teams) {
   teams.map((t, i) => {
     const rankClass = i < 3 ? rnClasses[i] : 'rn-other';
     const profitStr = t.hasAnyScore ? t.totalProfit.toFixed(0) + '元' : '待评分';
-    const profitClass = t.hasAnyScore ? (t.totalProfit >= 0 ? 'pos' : 'neg') : '';
     const roundsInfo = t.rounds.map(r => {
       const m = r.metrics;
       return `R${r.data.round}: ${m.netProfit !== null ? m.netProfit.toFixed(0)+'元' : '待评'}`;
