@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>调酒商业模拟 - 队伍提交</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html{font-size:16px;-webkit-tap-highlight-color:transparent}
@@ -263,16 +262,38 @@
 </div>
 
 <script>
-// ====== Supabase init ======
+// ====== Supabase init (动态加载，不阻塞页面) ======
 let supabase = null;
-try {
-  if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(
-      'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0'
-    );
+let sdkReady = false;
+const SUPABASE_URL = 'https://br-super-bril-5b7143a3.supabase.aidap-global.cn-beijing.volces.com';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjgwMzAwODk3fQ.iQvJdU1h7O0HqW_QK9U-LrEL4iz2j2uwL3HYaXTS1z0';
+
+let sdkResolve;
+const sdkPromise = new Promise(r => { sdkResolve = r; });
+
+function tryInitSupabase() {
+  if (window.supabase && window.supabase.createClient && !sdkReady) {
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      sdkReady = true;
+      sdkResolve(true);
+    } catch(e) {
+      console.error('Supabase init error:', e);
+      sdkResolve(false);
+    }
+    return true;
   }
-} catch(e) { console.error('Supabase init failed:', e); }
+  return false;
+}
+
+if (!tryInitSupabase()) {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload = () => { tryInitSupabase() || sdkResolve(false); };
+  s.onerror = () => { console.error('SDK load failed'); sdkResolve(false); };
+  document.head.appendChild(s);
+  setTimeout(() => { if (!sdkReady) sdkResolve(false); }, 15000);
+}
 
 // ====== Constants ======
 const COST_XDL = 3, COST_HPN = 7, COST_MSL = 4.8;
@@ -600,7 +621,8 @@ function showResult(data) {
 
 // ====== Init ======
 async function init() {
-  if (!supabase) {
+  const ready = await sdkPromise;
+  if (!ready || !supabase) {
     showStatus('⚠️ 数据库连接失败，请刷新页面重试（首次访问可能需要等待数据库唤醒）', 'error');
     return;
   }
