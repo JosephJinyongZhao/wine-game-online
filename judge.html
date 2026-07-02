@@ -180,14 +180,22 @@ function tryInitSupabase() {
   return false;
 }
 
-// 先检查是否已经加载
-if (!tryInitSupabase()) {
+// 多CDN级联回退加载
+const CDN_URLS = [
+  'https://unpkg.com/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
+function loadSDK(idx) {
+  if (idx >= CDN_URLS.length) { sdkResolve(false); return; }
   const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-  s.onload = () => { tryInitSupabase() || sdkResolve(false); };
-  s.onerror = () => { console.error('SDK load failed'); sdkResolve(false); };
+  s.src = CDN_URLS[idx];
+  s.onload = () => { tryInitSupabase() || loadSDK(idx + 1); };
+  s.onerror = () => { console.warn('CDN failed:', CDN_URLS[idx]); loadSDK(idx + 1); };
   document.head.appendChild(s);
-  setTimeout(() => { if (!sdkReady) sdkResolve(false); }, 15000);
+}
+if (!tryInitSupabase()) {
+  loadSDK(0);
+  setTimeout(() => { if (!sdkReady) sdkResolve(false); }, 20000);
 }
 
 // ====== Constants ======
