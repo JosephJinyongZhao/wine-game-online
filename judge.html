@@ -192,15 +192,7 @@ function doLogin() {
   if (pwd === JUDGE_PWD) {
     document.getElementById('loginOverlay').classList.add('hide');
     isLoggedIn = true;
-        initAfterLogin();
-      } else {
-        document.getElementById('loginOverlay').classList.remove('hide');
-        const hint = document.getElementById('loginHint');
-        hint.textContent = '⚠️ 数据库连接失败，请刷新页面重试';
-        hint.style.color = '#ff6b6b';
-        hint.style.display = 'block';
-      }
-    });
+    initAfterLogin();
   } else {
     document.getElementById('loginErr').style.display = 'block';
   }
